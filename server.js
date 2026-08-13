@@ -22,16 +22,11 @@ if (!fs.existsSync(uploadsDir)){
 }
 
 // Multer Storage Configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // save to server/uploads
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+// Helper to convert multer file to Base64 string
+const getBase64 = (file) => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
 // Middleware
 app.use(cors());
@@ -136,12 +131,12 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
 
     // Assign featured image
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = 'https://hi-techserver.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
+      propertyData.images.featured = getBase64(req.files['featuredImage'][0]);
     }
     
     // Assign gallery images
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver.onrender.com/uploads/' + f.filename);
+      const galleryUrls = req.files['galleryImages'].map(f => getBase64(f));
       propertyData.images.gallery = galleryUrls;
     }
 
@@ -242,10 +237,10 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
 
     // Assign file paths if uploaded
     if (req.files && req.files['image']) {
-      categoryData.image = 'https://hi-techserver.onrender.com/uploads/' + req.files['image'][0].filename;
+      categoryData.image = getBase64(req.files['image'][0]);
     }
     if (req.files && req.files['icon']) {
-      categoryData.icon = 'https://hi-techserver.onrender.com/uploads/' + req.files['icon'][0].filename;
+      categoryData.icon = getBase64(req.files['icon'][0]);
     }
 
     const newCategory = new Category(categoryData);
@@ -285,7 +280,7 @@ app.post('/api/interiordesigns', upload.single('image'), async (req, res) => {
   try {
     const designData = { ...req.body };
     if (req.file) {
-      designData.image = 'https://hi-techserver.onrender.com/uploads/' + req.file.filename;
+      designData.image = getBase64(req.file);
     }
     const newDesign = new InteriorDesign(designData);
     await newDesign.save();
