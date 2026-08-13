@@ -136,12 +136,12 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
 
     // Assign featured image
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = 'http://localhost:5000/uploads/' + req.files['featuredImage'][0].filename;
+      propertyData.images.featured = 'https://hi-techserver.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
     }
     
     // Assign gallery images
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => 'http://localhost:5000/uploads/' + f.filename);
+      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver.onrender.com/uploads/' + f.filename);
       propertyData.images.gallery = galleryUrls;
     }
 
@@ -242,10 +242,10 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
 
     // Assign file paths if uploaded
     if (req.files && req.files['image']) {
-      categoryData.image = 'http://localhost:5000/uploads/' + req.files['image'][0].filename;
+      categoryData.image = 'https://hi-techserver.onrender.com/uploads/' + req.files['image'][0].filename;
     }
     if (req.files && req.files['icon']) {
-      categoryData.icon = 'http://localhost:5000/uploads/' + req.files['icon'][0].filename;
+      categoryData.icon = 'https://hi-techserver.onrender.com/uploads/' + req.files['icon'][0].filename;
     }
 
     const newCategory = new Category(categoryData);
@@ -285,7 +285,7 @@ app.post('/api/interiordesigns', upload.single('image'), async (req, res) => {
   try {
     const designData = { ...req.body };
     if (req.file) {
-      designData.image = 'http://localhost:5000/uploads/' + req.file.filename;
+      designData.image = 'https://hi-techserver.onrender.com/uploads/' + req.file.filename;
     }
     const newDesign = new InteriorDesign(designData);
     await newDesign.save();
