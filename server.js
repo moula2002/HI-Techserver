@@ -159,9 +159,31 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
   }
 });
 
-app.put('/api/properties/:id', async (req, res) => {
+app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 10 }]), async (req, res) => {
   try {
-    const updated = await Property.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    let propertyData = {};
+    if (req.body.data) {
+      propertyData = JSON.parse(req.body.data);
+    } else {
+      propertyData = req.body; // Fallback if sent as standard JSON (without files)
+    }
+
+    if (!propertyData.images) {
+      propertyData.images = {};
+    }
+
+    // Assign featured image
+    if (req.files && req.files['featuredImage']) {
+      propertyData.images.featured = getBase64(req.files['featuredImage'][0]);
+    }
+    
+    // Assign gallery images
+    if (req.files && req.files['galleryImages']) {
+      const galleryUrls = req.files['galleryImages'].map(f => getBase64(f));
+      propertyData.images.gallery = galleryUrls;
+    }
+
+    const updated = await Property.findByIdAndUpdate(req.params.id, propertyData, { new: true });
     if (!updated) return res.status(404).json({ message: 'Property not found' });
     res.json({ ...updated._doc, id: updated._id.toString() });
   } catch (err) {
@@ -259,6 +281,49 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: 'Category validation failed or name must be unique' });
+  }
+});
+
+app.get('/api/categories/:id', async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    if (!category) return res.status(404).json({ message: 'Category not found' });
+    res.json({ ...category._doc, id: category._id.toString() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.put('/api/categories/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'icon', maxCount: 1 }]), async (req, res) => {
+  try {
+    const categoryData = { ...req.body };
+    
+    // Parse SEO object if sent as string from formData
+    if (typeof categoryData.seo === 'string') {
+      try {
+        categoryData.seo = JSON.parse(categoryData.seo);
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    // Handle booleans from formData string
+    if (categoryData.showOnHome !== undefined) categoryData.showOnHome = categoryData.showOnHome === 'true' || categoryData.showOnHome === true;
+    if (categoryData.featured !== undefined) categoryData.featured = categoryData.featured === 'true' || categoryData.featured === true;
+
+    // Assign file paths if uploaded
+    if (req.files && req.files['image']) {
+      categoryData.image = getBase64(req.files['image'][0]);
+    }
+    if (req.files && req.files['icon']) {
+      categoryData.icon = getBase64(req.files['icon'][0]);
+    }
+
+    const updated = await Category.findByIdAndUpdate(req.params.id, categoryData, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Category not found' });
+    res.json({ ...updated._doc, id: updated._id.toString() });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 
