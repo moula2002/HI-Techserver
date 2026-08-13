@@ -116,6 +116,16 @@ app.get('/api/properties', async (req, res) => {
   }
 });
 
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ message: 'Property not found' });
+    res.json({ ...property._doc, id: property._id.toString() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 10 }]), async (req, res) => {
   try {
     let propertyData = {};
