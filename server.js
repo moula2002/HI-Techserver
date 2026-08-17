@@ -11,6 +11,7 @@ const Property = require('./models/Property');
 const Enquiry = require('./models/Enquiry');
 const Category = require('./models/Category');
 const InteriorDesign = require('./models/InteriorDesign');
+const Banner = require('./models/Banner');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -369,6 +370,44 @@ app.delete('/api/interiordesigns/:id', async (req, res) => {
   try {
     const deleted = await InteriorDesign.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Design not found' });
+    res.json({ message: 'Deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// BANNERS API
+app.get('/api/banners', async (req, res) => {
+  try {
+    const banners = await Banner.find().sort({ createdAt: -1 });
+    const mapped = banners.map(b => ({
+      ...b._doc,
+      id: b._id.toString()
+    }));
+    res.json(mapped);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/banners', upload.single('image'), async (req, res) => {
+  try {
+    const bannerData = { ...req.body };
+    if (req.file) {
+      bannerData.image = getBase64(req.file);
+    }
+    const newBanner = new Banner(bannerData);
+    await newBanner.save();
+    res.status(201).json({ ...newBanner._doc, id: newBanner._id.toString() });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+app.delete('/api/banners/:id', async (req, res) => {
+  try {
+    const deleted = await Banner.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Banner not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
