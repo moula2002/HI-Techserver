@@ -390,12 +390,20 @@ app.get('/api/banners', async (req, res) => {
   }
 });
 
-app.post('/api/banners', upload.single('image'), async (req, res) => {
+app.post('/api/banners', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
   try {
     const bannerData = { ...req.body };
-    if (req.file) {
-      bannerData.image = getBase64(req.file);
+    if (req.files && req.files['image']) {
+      bannerData.image = getBase64(req.files['image'][0]);
     }
+    if (req.files && req.files['video']) {
+      bannerData.video = getBase64(req.files['video'][0]);
+    }
+    
+    if (!bannerData.image && !bannerData.video) {
+      return res.status(400).json({ message: 'Please provide an image or a video' });
+    }
+    
     const newBanner = new Banner(bannerData);
     await newBanner.save();
     res.status(201).json({ ...newBanner._doc, id: newBanner._id.toString() });
