@@ -80,14 +80,13 @@ const propertySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save hook to generate slug if not provided manually
-propertySchema.pre('save', function(next) {
+propertySchema.pre('save', function() {
   if (this.isModified('title') && !this.slug) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
   }
-  next();
 });
 
 module.exports = mongoose.model('Property', propertySchema);
