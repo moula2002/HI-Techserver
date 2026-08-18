@@ -10,24 +10,27 @@ const Admin = require('./models/Admin');
 const Property = require('./models/Property');
 const Enquiry = require('./models/Enquiry');
 const Category = require('./models/Category');
-const InteriorDesign = require('./models/InteriorDesign');
-const Banner = require('./models/Banner');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Setup Uploads Directory
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)){
-    fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
 }
 
 // Multer Storage Configuration
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // save to server/uploads
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
 const upload = multer({ storage: storage });
-
-// Helper to convert multer file to Base64 string
-const getBase64 = (file) => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
 // Middleware
 app.use(cors());
@@ -38,7 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // serve u
 mongoose.connect(process.env.MONGO_URI, { family: 4 })
   .then(async () => {
     console.log('Successfully connected to MongoDB Atlas!');
-    
+
     // Seed default admin
     const adminCount = await Admin.countDocuments();
     if (adminCount === 0) {
@@ -88,13 +91,13 @@ app.put('/api/admin/profile', async (req, res) => {
   try {
     const admin = await Admin.findOne();
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
-    
+
     // Update fields
     if (req.body.name) admin.name = req.body.name;
     if (req.body.email) admin.email = req.body.email;
     if (req.body.phone) admin.phone = req.body.phone;
     if (req.body.password) admin.password = req.body.password; // In real app, hash this!
-    
+
     await admin.save();
     res.json({ message: 'Profile updated successfully', admin: { name: admin.name, email: admin.email, phone: admin.phone } });
   } catch (err) {
@@ -117,17 +120,7 @@ app.get('/api/properties', async (req, res) => {
   }
 });
 
-app.get('/api/properties/:id', async (req, res) => {
-  try {
-    const property = await Property.findById(req.params.id);
-    if (!property) return res.status(404).json({ message: 'Property not found' });
-    res.json({ ...property._doc, id: property._id.toString() });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 10 }]), async (req, res) => {
+app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }]), async (req, res) => {
   try {
     let propertyData = {};
     if (req.body.data) {
@@ -142,12 +135,12 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
 
     // Assign featured image
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = getBase64(req.files['featuredImage'][0]);
+      propertyData.images.featured = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
     }
-    
+
     // Assign gallery images
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => getBase64(f));
+      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver-zd1d.onrender.com/uploads/' + f.filename);
       propertyData.images.gallery = galleryUrls;
     }
 
@@ -160,28 +153,28 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
   }
 });
 
-app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 10 }]), async (req, res) => {
+app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }]), async (req, res) => {
   try {
     let propertyData = {};
     if (req.body.data) {
       propertyData = JSON.parse(req.body.data);
     } else {
-      propertyData = req.body; // Fallback if sent as standard JSON (without files)
+      propertyData = req.body;
     }
 
     if (!propertyData.images) {
       propertyData.images = {};
     }
 
-    // Assign featured image
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = getBase64(req.files['featuredImage'][0]);
+      propertyData.images.featured = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
     }
-    
-    // Assign gallery images
+
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => getBase64(f));
-      propertyData.images.gallery = galleryUrls;
+      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver-zd1d.onrender.com/uploads/' + f.filename);
+      propertyData.images.gallery = propertyData.images.gallery && propertyData.images.gallery.length > 0
+        ? [...propertyData.images.gallery, ...galleryUrls]
+        : galleryUrls;
     }
 
     const updated = await Property.findByIdAndUpdate(req.params.id, propertyData, { new: true });
@@ -205,13 +198,39 @@ app.delete('/api/properties/:id', async (req, res) => {
 // ENQUIRIES API
 app.get('/api/enquiries', async (req, res) => {
   try {
-    const enquiries = await Enquiry.find().sort({ createdAt: -1 });
+    const enquiries = await Enquiry.find().populate('propertyId', 'title slug').sort({ createdAt: -1 });
     const mapped = enquiries.map(e => ({
       ...e._doc,
       id: e._id.toString(),
       date: new Date(e.createdAt).toLocaleDateString() // formatting date
     }));
     res.json(mapped);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/enquiries', async (req, res) => {
+  try {
+    const { name, email, phone, message, propertyId, interestedIn, formSource } = req.body;
+
+    // Basic validation
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: 'Name, email, and message are required' });
+    }
+
+    const newEnquiry = new Enquiry({
+      name,
+      email,
+      phone,
+      message,
+      interestedIn,
+      formSource,
+      propertyId: propertyId || undefined
+    });
+
+    await newEnquiry.save();
+    res.status(201).json({ message: 'Enquiry submitted successfully', enquiry: newEnquiry });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -254,7 +273,7 @@ app.get('/api/categories', async (req, res) => {
 app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'icon', maxCount: 1 }]), async (req, res) => {
   try {
     const categoryData = { ...req.body };
-    
+
     // Parse SEO object if sent as string from formData
     if (typeof categoryData.seo === 'string') {
       try {
@@ -263,17 +282,17 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
         // ignore
       }
     }
-    
+
     // Handle booleans from formData string
     categoryData.showOnHome = categoryData.showOnHome === 'true';
     categoryData.featured = categoryData.featured === 'true';
 
     // Assign file paths if uploaded
     if (req.files && req.files['image']) {
-      categoryData.image = getBase64(req.files['image'][0]);
+      categoryData.image = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['image'][0].filename;
     }
     if (req.files && req.files['icon']) {
-      categoryData.icon = getBase64(req.files['icon'][0]);
+      categoryData.icon = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['icon'][0].filename;
     }
 
     const newCategory = new Category(categoryData);
@@ -285,137 +304,10 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
   }
 });
 
-app.get('/api/categories/:id', async (req, res) => {
-  try {
-    const category = await Category.findById(req.params.id);
-    if (!category) return res.status(404).json({ message: 'Category not found' });
-    res.json({ ...category._doc, id: category._id.toString() });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.put('/api/categories/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'icon', maxCount: 1 }]), async (req, res) => {
-  try {
-    const categoryData = { ...req.body };
-    
-    // Parse SEO object if sent as string from formData
-    if (typeof categoryData.seo === 'string') {
-      try {
-        categoryData.seo = JSON.parse(categoryData.seo);
-      } catch (e) {
-        // ignore
-      }
-    }
-    
-    // Handle booleans from formData string
-    if (categoryData.showOnHome !== undefined) categoryData.showOnHome = categoryData.showOnHome === 'true' || categoryData.showOnHome === true;
-    if (categoryData.featured !== undefined) categoryData.featured = categoryData.featured === 'true' || categoryData.featured === true;
-
-    // Assign file paths if uploaded
-    if (req.files && req.files['image']) {
-      categoryData.image = getBase64(req.files['image'][0]);
-    }
-    if (req.files && req.files['icon']) {
-      categoryData.icon = getBase64(req.files['icon'][0]);
-    }
-
-    const updated = await Category.findByIdAndUpdate(req.params.id, categoryData, { new: true });
-    if (!updated) return res.status(404).json({ message: 'Category not found' });
-    res.json({ ...updated._doc, id: updated._id.toString() });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
 app.delete('/api/categories/:id', async (req, res) => {
   try {
     const deleted = await Category.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Category not found' });
-    res.json({ message: 'Deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// INTERIOR DESIGNS API
-app.get('/api/interiordesigns', async (req, res) => {
-  try {
-    const designs = await InteriorDesign.find().sort({ createdAt: -1 });
-    const mapped = designs.map(d => ({
-      ...d._doc,
-      id: d._id.toString()
-    }));
-    res.json(mapped);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.post('/api/interiordesigns', upload.single('image'), async (req, res) => {
-  try {
-    const designData = { ...req.body };
-    if (req.file) {
-      designData.image = getBase64(req.file);
-    }
-    const newDesign = new InteriorDesign(designData);
-    await newDesign.save();
-    res.status(201).json({ ...newDesign._doc, id: newDesign._id.toString() });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-app.delete('/api/interiordesigns/:id', async (req, res) => {
-  try {
-    const deleted = await InteriorDesign.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Design not found' });
-    res.json({ message: 'Deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// BANNERS API
-app.get('/api/banners', async (req, res) => {
-  try {
-    const banners = await Banner.find().sort({ createdAt: -1 });
-    const mapped = banners.map(b => ({
-      ...b._doc,
-      id: b._id.toString()
-    }));
-    res.json(mapped);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.post('/api/banners', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-  try {
-    const bannerData = { ...req.body };
-    if (req.files && req.files['image']) {
-      bannerData.image = getBase64(req.files['image'][0]);
-    }
-    if (req.files && req.files['video']) {
-      bannerData.video = getBase64(req.files['video'][0]);
-    }
-    
-    if (!bannerData.image && !bannerData.video) {
-      return res.status(400).json({ message: 'Please provide an image or a video' });
-    }
-    
-    const newBanner = new Banner(bannerData);
-    await newBanner.save();
-    res.status(201).json({ ...newBanner._doc, id: newBanner._id.toString() });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-app.delete('/api/banners/:id', async (req, res) => {
-  try {
-    const deleted = await Banner.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Banner not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -442,6 +334,9 @@ app.get('/api/dashboard/stats', async (req, res) => {
 });
 
 // Start Server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

@@ -35,8 +35,7 @@ const propertySchema = new mongoose.Schema({
     balconies: { type: String },
     floors: { type: String },
     parkingSpaces: { type: String },
-    facing: { type: String }, // East, West, North, South
-    furnishing: { type: String } // Fully-furnished, Semi-furnished, Unfurnished
+    facing: { type: String } // East, West, North, South
   },
 
   // 5. Amenities
@@ -81,13 +80,14 @@ const propertySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save hook to generate slug if not provided manually
-propertySchema.pre('save', function() {
+propertySchema.pre('save', function(next) {
   if (this.isModified('title') && !this.slug) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
   }
+  next();
 });
 
 module.exports = mongoose.model('Property', propertySchema);

@@ -16,13 +16,14 @@ const categorySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save hook to generate slug if not provided manually
-categorySchema.pre('save', function() {
+categorySchema.pre('save', function(next) {
   if (this.isModified('name') && !this.slug) {
     this.slug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
   }
+  next();
 });
 
 module.exports = mongoose.model('Category', categorySchema);
