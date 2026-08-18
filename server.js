@@ -305,6 +305,16 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
   }
 });
 
+app.get('/api/categories/:id', async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    if (!category) return res.status(404).json({ message: 'Category not found' });
+    res.json({ ...category._doc, id: category._id.toString() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.put('/api/categories/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'icon', maxCount: 1 }]), async (req, res) => {
   try {
     const categoryData = { ...req.body };
