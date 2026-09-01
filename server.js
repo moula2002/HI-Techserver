@@ -136,12 +136,12 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
 
     // Assign featured image
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
+      propertyData.images.featured = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['featuredImage'][0].filename;
     }
 
     // Assign gallery images
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver-zd1d.onrender.com/uploads/' + f.filename);
+      const galleryUrls = req.files['galleryImages'].map(f => req.protocol + '://' + req.get('host') + '/uploads/' + f.filename);
       propertyData.images.gallery = galleryUrls;
     }
 
@@ -168,11 +168,11 @@ app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount:
     }
 
     if (req.files && req.files['featuredImage']) {
-      propertyData.images.featured = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['featuredImage'][0].filename;
+      propertyData.images.featured = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['featuredImage'][0].filename;
     }
 
     if (req.files && req.files['galleryImages']) {
-      const galleryUrls = req.files['galleryImages'].map(f => 'https://hi-techserver-zd1d.onrender.com/uploads/' + f.filename);
+      const galleryUrls = req.files['galleryImages'].map(f => req.protocol + '://' + req.get('host') + '/uploads/' + f.filename);
       propertyData.images.gallery = propertyData.images.gallery && propertyData.images.gallery.length > 0
         ? [...propertyData.images.gallery, ...galleryUrls]
         : galleryUrls;
@@ -290,10 +290,10 @@ app.post('/api/categories', upload.fields([{ name: 'image', maxCount: 1 }, { nam
 
     // Assign file paths if uploaded
     if (req.files && req.files['image']) {
-      categoryData.image = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['image'][0].filename;
+      categoryData.image = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['image'][0].filename;
     }
     if (req.files && req.files['icon']) {
-      categoryData.icon = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['icon'][0].filename;
+      categoryData.icon = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['icon'][0].filename;
     }
 
     const newCategory = new Category(categoryData);
@@ -327,10 +327,10 @@ app.put('/api/categories/:id', upload.fields([{ name: 'image', maxCount: 1 }, { 
     if (categoryData.featured !== undefined) categoryData.featured = categoryData.featured === 'true';
 
     if (req.files && req.files['image']) {
-      categoryData.image = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['image'][0].filename;
+      categoryData.image = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['image'][0].filename;
     }
     if (req.files && req.files['icon']) {
-      categoryData.icon = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['icon'][0].filename;
+      categoryData.icon = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['icon'][0].filename;
     }
 
     const updated = await Category.findByIdAndUpdate(req.params.id, categoryData, { new: true });
@@ -370,10 +370,10 @@ app.post('/api/banners', upload.fields([{ name: 'image', maxCount: 1 }, { name: 
   try {
     const bannerData = {};
     if (req.files && req.files['image']) {
-      bannerData.image = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['image'][0].filename;
+      bannerData.image = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['image'][0].filename;
     }
     if (req.files && req.files['video']) {
-      bannerData.video = 'https://hi-techserver-zd1d.onrender.com/uploads/' + req.files['video'][0].filename;
+      bannerData.video = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['video'][0].filename;
     }
 
     if (!bannerData.image && !bannerData.video) {
