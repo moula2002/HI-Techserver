@@ -154,6 +154,17 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
   }
 });
 
+
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ message: 'Property not found' });
+    res.json({ ...property._doc, id: property._id.toString() });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }]), async (req, res) => {
   try {
     let propertyData = {};
@@ -178,7 +189,7 @@ app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount:
         : galleryUrls;
     }
 
-    const updated = await Property.findByIdAndUpdate(req.params.id, propertyData, { new: true });
+    const updated = await Property.findByIdAndUpdate(req.params.id, propertyData, { returnDocument: 'after' });
     if (!updated) return res.status(404).json({ message: 'Property not found' });
     res.json({ ...updated._doc, id: updated._id.toString() });
   } catch (err) {
@@ -239,7 +250,7 @@ app.post('/api/enquiries', async (req, res) => {
 
 app.put('/api/enquiries/:id', async (req, res) => {
   try {
-    const updated = await Enquiry.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await Enquiry.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     if (!updated) return res.status(404).json({ message: 'Enquiry not found' });
     res.json({ ...updated._doc, id: updated._id.toString() });
   } catch (err) {
@@ -333,7 +344,7 @@ app.put('/api/categories/:id', upload.fields([{ name: 'image', maxCount: 1 }, { 
       categoryData.icon = req.protocol + '://' + req.get('host') + '/uploads/' + req.files['icon'][0].filename;
     }
 
-    const updated = await Category.findByIdAndUpdate(req.params.id, categoryData, { new: true });
+    const updated = await Category.findByIdAndUpdate(req.params.id, categoryData, { returnDocument: 'after' });
     if (!updated) return res.status(404).json({ message: 'Category not found' });
     res.json({ ...updated._doc, id: updated._id.toString() });
   } catch (err) {
