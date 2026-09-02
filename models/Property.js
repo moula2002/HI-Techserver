@@ -4,7 +4,8 @@ const propertySchema = new mongoose.Schema({
   // 1. Basic Information
   title: { type: String, required: true },
   slug: { type: String, unique: true },
-  type: { type: String, required: true }, // e.g. Villa, Apartment, Plot
+  category: { type: String, enum: ['Residential', 'Commercial', 'Plots/Land'], default: 'Residential' },
+    type: { type: String, required: true }, // e.g. Villa, Apartment, Plot
   purpose: { type: String, required: true }, // Sale, Rent
   status: { type: String, required: true, default: 'Available' }, // Available, Sold, Rented, Upcoming
 
