@@ -222,7 +222,7 @@ app.get('/api/enquiries', async (req, res) => {
   }
 });
 
-app.post('/api/enquiries', async (req, res) => {
+app.post('/api/enquiries', upload.single('image'), async (req, res) => {
   try {
     const { name, email, phone, message, propertyId, interestedIn, formSource } = req.body;
 
@@ -238,7 +238,8 @@ app.post('/api/enquiries', async (req, res) => {
       message,
       interestedIn,
       formSource,
-      propertyId: propertyId || undefined
+      propertyId: propertyId || undefined,
+      image: req.file ? req.protocol + '://' + req.get('host') + '/uploads/' + req.file.filename : undefined
     });
 
     await newEnquiry.save();
@@ -433,3 +434,4 @@ app.get('/api/dashboard/stats', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+

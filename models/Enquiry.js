@@ -23,7 +23,11 @@ const enquirySchema = new mongoose.Schema({
   propertyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property'
+  },
+  image: {
+    type: String
   }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Enquiry', enquirySchema);
+
