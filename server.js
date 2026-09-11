@@ -23,7 +23,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Multer Storage Configuration
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fieldSize: 25 * 1024 * 1024 } });
 
 // Middleware
 app.use(cors());
