@@ -113,7 +113,7 @@ app.get('/api/properties', async (req, res) => {
   }
 });
 
-app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }]), async (req, res) => {
+app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }, { name: 'propertyVideo', maxCount: 1 }]), async (req, res) => {
   try {
     let propertyData = {};
     if (req.body.data) {
@@ -137,6 +137,11 @@ app.post('/api/properties', upload.fields([{ name: 'featuredImage', maxCount: 1 
       propertyData.images.gallery = galleryUrls;
     }
 
+    // Assign video
+    if (req.files && req.files['propertyVideo']) {
+      propertyData.images.videoUrl = `data:${req.files['propertyVideo'][0].mimetype};base64,${req.files['propertyVideo'][0].buffer.toString('base64')}`;
+    }
+
     const newProp = new Property(propertyData);
     await newProp.save();
     res.status(201).json({ ...newProp._doc, id: newProp._id.toString() });
@@ -157,7 +162,7 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
-app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }]), async (req, res) => {
+app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount: 1 }, { name: 'galleryImages', maxCount: 5 }, { name: 'propertyVideo', maxCount: 1 }]), async (req, res) => {
   try {
     let propertyData = {};
     if (req.body.data) {
@@ -179,6 +184,10 @@ app.put('/api/properties/:id', upload.fields([{ name: 'featuredImage', maxCount:
       propertyData.images.gallery = propertyData.images.gallery && propertyData.images.gallery.length > 0
         ? [...propertyData.images.gallery, ...galleryUrls]
         : galleryUrls;
+    }
+
+    if (req.files && req.files['propertyVideo']) {
+      propertyData.images.videoUrl = `data:${req.files['propertyVideo'][0].mimetype};base64,${req.files['propertyVideo'][0].buffer.toString('base64')}`;
     }
 
     const updated = await Property.findByIdAndUpdate(req.params.id, propertyData, { returnDocument: 'after' });
